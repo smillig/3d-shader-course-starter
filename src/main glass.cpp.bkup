@@ -6,8 +6,6 @@
 #include <sstream>
 #include <string>
 
-#include <algorithm>
-
 // This is our main file for the OpenGL application.
 // It sets up a window, compiles shaders, and renders a simple triangle.
 // 
@@ -130,7 +128,7 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 }
-}
+} // namespace
 
 int main()
 {
@@ -175,16 +173,16 @@ int main()
 
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
-;
+
+    // position.xyz, color.rgb
     constexpr float vertices[] = {
-    // Position (x, y, z)        Color (r, g, b)
-    -1.0f,  1.0f, 0.0f,          1.0f, 0.0f, 0.0f,  // Top-left (red)
-    -1.0f, -1.0f, 0.0f,          0.0f, 0.0f, 1.0f,  // Bottom-left (green)
-     1.0f, -1.0f, 0.0f,          0.0f, 1.0f, 0.0f,  // Bottom-right (blue)
-     1.0f, -1.0f, 0.0f,          0.0f, 1.0f, 0.0f,  // Bottom-right (blue)
-     1.0f,  1.0f, 0.0f,          0.0f, 0.0f, 1.0f,  // Top-right (yellow)
-    -1.0f,  1.0f, 0.0f,          1.0f, 0.0f, 0.0f   // Top-left (red)
-};
+        -1.0f,  1.0f,  // Top-left
+        -1.0f, -1.0f,  // Bottom-left
+         1.0f, -1.0f,  // Bottom-right
+         1.0f, -1.0f,  // Bottom-right
+         1.0f,  1.0f,  // Top-right
+        -1.0f,  1.0f   // Top-left
+    };
 
     GLuint vao = 0;
     GLuint vbo = 0;
@@ -197,15 +195,11 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    constexpr GLsizei stride = 6 * sizeof(float);
+    constexpr GLsizei stride = 2 * sizeof(float);
 
     glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
+        0, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
     glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 
@@ -214,7 +208,7 @@ int main()
     try
     {
         shaderProgram =
-            createShaderProgram("shaders/basic.vert", "shaders/basic.frag");
+            createShaderProgram("shaders/shadertoy/trippyGlass.vert", "shaders/shadertoy/trippyGlass.frag");
     }
     catch (const std::exception& exception)
     {
@@ -226,14 +220,10 @@ int main()
         return 1;
     }
 
-    GLint time = glGetUniformLocation(shaderProgram, "iTime");
-    GLint colorModR = glGetUniformLocation(shaderProgram, "colorBounceR");
-    GLint colorModG = glGetUniformLocation(shaderProgram, "colorBounceG");
-    GLint colorModB = glGetUniformLocation(shaderProgram, "colorBounceB");
-
-    float bounceR = 0.0;
-    float bounceG = 0.0;
-    float bounceB = 0.0;
+    // Get uniform locations AFTER shader program is created
+    GLint timeLoc = glGetUniformLocation(shaderProgram, "iTime");
+    GLint resolutionLoc = glGetUniformLocation(shaderProgram, "iResolution");
+    GLint mouseLoc = glGetUniformLocation(shaderProgram, "iMouse");
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)
     {
@@ -241,20 +231,14 @@ int main()
 
         glClearColor(0.08f, 0.09f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        double deltaTime = glfwGetTime();
-        glUseProgram(shaderProgram);
-        glUniform1f(time, (float)deltaTime);
-        glUniform1f(colorModR, bounceR);
-        glUniform1f(colorModG, bounceG);
-        glUniform1f(colorModB, bounceB);
 
-        float t = deltaTime * 2.0f * 3.14159265f / 3.0f;
-        bounceR = 0.5f + 0.5f * std::sin(t);
-        bounceG = 0.5f + 0.5f * std::sin(t + 2.0f * 3.14159265f / 3.0f);
-        bounceB = 0.5f + 0.5f * std::sin(t + 4.0f * 3.14159265f / 3.0f);
+        glUseProgram(shaderProgram);
+        glUniform1f(timeLoc, (float)glfwGetTime());
+        glUniform3f(resolutionLoc, (float)WindowWidth, (float)WindowHeight, 1.0f);
+        glUniform2f(mouseLoc, 5.0f, 5.0f);
 
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, 6);  // 6 vertices (2 triangles for quad)
 
         glfwSwapBuffers(window);
         glfwPollEvents();

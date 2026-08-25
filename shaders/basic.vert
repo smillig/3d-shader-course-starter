@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 // Vertex shader. What does that mean?
 // A vertex shader is responsible for processing each vertex's attributes,
@@ -10,9 +10,15 @@ layout (location = 1) in vec3 aColor; // Input vertex color. This is the color o
 // In this case, aPosition is at location 0 and aColor is at location 1.
 
 out vec3 vertexColor; // Output variable to pass the vertex color to the fragment shader.
+out float colorPhase;
+
+uniform float iTime;
+
 
 void main()
 {
     gl_Position = vec4(aPosition, 1.0); // gl_Position is a built-in variable that holds the final position of the vertex in clip space.
     vertexColor = aColor;
+
+    colorPhase = float(gl_VertexID) / 6.0;
 }

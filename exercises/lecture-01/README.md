@@ -33,6 +33,11 @@ From the repository root:
 cmake --build build --config Debug
 .\build\bin\shader_course.exe
 ```
+NOTE: I had to also run:
+```powershell
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Debug
+```
+this fixed the error I was getting from the first powershell command.
 
 You should see the RGB triangle.
 
