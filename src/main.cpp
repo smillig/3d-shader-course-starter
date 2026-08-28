@@ -1,12 +1,14 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-
-#include <algorithm>
 
 // This is our main file for the OpenGL application.
 // It sets up a window, compiles shaders, and renders a simple triangle.
@@ -130,7 +132,7 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 }
-}
+} // namespace
 
 int main()
 {
@@ -175,16 +177,13 @@ int main()
 
     std::cout << "OpenGL: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
-;
+
+    // position.xyz, color.rgb
     constexpr float vertices[] = {
-    // Position (x, y, z)        Color (r, g, b)
-    -1.0f,  1.0f, 0.0f,          1.0f, 0.0f, 0.0f,  // Top-left (red)
-    -1.0f, -1.0f, 0.0f,          0.0f, 0.0f, 1.0f,  // Bottom-left (green)
-     1.0f, -1.0f, 0.0f,          0.0f, 1.0f, 0.0f,  // Bottom-right (blue)
-     1.0f, -1.0f, 0.0f,          0.0f, 1.0f, 0.0f,  // Bottom-right (blue)
-     1.0f,  1.0f, 0.0f,          0.0f, 0.0f, 1.0f,  // Top-right (yellow)
-    -1.0f,  1.0f, 0.0f,          1.0f, 0.0f, 0.0f   // Top-left (red)
-};
+         0.0f,  0.65f, 0.0f,   1.0f, 0.25f, 0.20f,
+        -0.65f, -0.55f, 0.0f,   0.20f, 0.90f, 0.35f,
+         0.65f, -0.55f, 0.0f,   0.20f, 0.45f, 1.00f
+    };
 
     GLuint vao = 0;
     GLuint vbo = 0;
@@ -226,35 +225,93 @@ int main()
         return 1;
     }
 
-    GLint time = glGetUniformLocation(shaderProgram, "iTime");
-    GLint colorModR = glGetUniformLocation(shaderProgram, "colorBounceR");
-    GLint colorModG = glGetUniformLocation(shaderProgram, "colorBounceG");
-    GLint colorModB = glGetUniformLocation(shaderProgram, "colorBounceB");
+    // Uniform locations identify the three matrix inputs in the vertex shader.
+    // We ask for them once after linking, then use the locations when sending
+    // matrix values from the CPU to the GPU before drawing.
+    const GLint modelLocation = glGetUniformLocation(shaderProgram, "model");
+    const GLint viewLocation = glGetUniformLocation(shaderProgram, "view");
+    const GLint projectionLocation = glGetUniformLocation(shaderProgram, "projection");
 
-    float bounceR = 0.0;
-    float bounceG = 0.0;
-    float bounceB = 0.0;
+    if (modelLocation == -1 ||
+        viewLocation == -1 ||
+        projectionLocation == -1)
+    {
+        std::cerr
+            << "Note: one or more matrix uniforms are inactive. "
+            << "This is expected if the current shader experiment does not use them.\n";
+    }
+
+    // glm::mat4(1.0f) creates an identity matrix: it leaves a vertex unchanged.
+    // This is a conservative starting model transform. What translation,
+    // rotation, or scale would you apply here to move the triangle in its world?
+    glm::mat4 model(1.0f);
+
+    // The view matrix converts world-space positions into view space. Moving the
+    // world by -2 on Z places the triangle in front of the conventional OpenGL
+    // viewer without introducing a camera class or camera controls.
+    const glm::mat4 view =
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f));
+
+    // These values define the perspective viewing volume. Keeping them named and
+    // visible makes it easy to ask: what changes when the field of view narrows,
+    // or when the near and far clipping planes move?
+    const float fieldOfView = glm::radians(45.0f);
+    const float nearPlane = 0.1f;
+    const float farPlane = 100.0f;
+    float drift = 0.0f;
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)
     {
         processInput(window);
 
+        // Framebuffer dimensions can differ from window dimensions on high-DPI
+        // displays. Reading the current framebuffer size keeps projected shapes
+        // in the correct proportions after a resize. A minimized window may have
+        // no drawable area, so wait for events instead of dividing by zero.
+        int framebufferWidth = 0;
+        int framebufferHeight = 0;
+        glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
+
+        if (framebufferWidth == 0 || framebufferHeight == 0)
+        {
+            glfwPollEvents();
+            continue;
+        }
+
+        const float aspectRatio =
+            static_cast<float>(framebufferWidth) /
+            static_cast<float>(framebufferHeight);
+        const glm::mat4 projection =
+            glm::perspective(fieldOfView, aspectRatio, nearPlane, farPlane);
+
         glClearColor(0.08f, 0.09f, 0.12f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        double deltaTime = glfwGetTime();
-        glUseProgram(shaderProgram);
-        glUniform1f(time, (float)deltaTime);
-        glUniform1f(colorModR, bounceR);
-        glUniform1f(colorModG, bounceG);
-        glUniform1f(colorModB, bounceB);
 
-        float t = deltaTime * 2.0f * 3.14159265f / 3.0f;
-        bounceR = 0.5f + 0.5f * std::sin(t);
-        bounceG = 0.5f + 0.5f * std::sin(t + 2.0f * 3.14159265f / 3.0f);
-        bounceB = 0.5f + 0.5f * std::sin(t + 4.0f * 3.14159265f / 3.0f);
+        glUseProgram(shaderProgram);
+
+        float rotAngle = glfwGetTime();
+
+        glm::mat4 xRotationMatrix =
+        {
+            cos(rotAngle), 0.0, sin(rotAngle), 0.0f,
+            0.0f, 1.0, 0.0f, 0.0f,
+            -sin(rotAngle), 0.0f , cos(rotAngle), 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        };
+
+        model = xRotationMatrix * glm::mat4(1.0f);
+        drift += 0.01f;
+        model = glm::translate(model, glm::vec3(drift, 0.0f, 0.0f));
+        // glm::value_ptr exposes each GLM matrix as contiguous float data.
+        // GL_FALSE means OpenGL should use the conventional GLM/OpenGL matrix
+        // layout directly, without transposing it during the upload.
+        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(
+            projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
 
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
