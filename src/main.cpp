@@ -231,6 +231,7 @@ int main()
     const GLint modelLocation = glGetUniformLocation(shaderProgram, "model");
     const GLint viewLocation = glGetUniformLocation(shaderProgram, "view");
     const GLint projectionLocation = glGetUniformLocation(shaderProgram, "projection");
+    const GLint timeLocation = glGetUniformLocation(shaderProgram, "time");
 
     if (modelLocation == -1 ||
         viewLocation == -1 ||
@@ -239,6 +240,13 @@ int main()
         std::cerr
             << "Note: one or more matrix uniforms are inactive. "
             << "This is expected if the current shader experiment does not use them.\n";
+    }
+
+    if (timeLocation == -1)
+    {
+        std::cerr
+            << "Note: the time uniform is inactive. "
+            << "This is expected if the current shader experiment does not use it.\n";
     }
 
     // glm::mat4(1.0f) creates an identity matrix: it leaves a vertex unchanged.
@@ -258,7 +266,7 @@ int main()
     const float fieldOfView = glm::radians(45.0f);
     const float nearPlane = 0.1f;
     const float farPlane = 100.0f;
-    float drift = 0.0f;
+    // float drift = 0.0f;
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)
     {
@@ -289,19 +297,19 @@ int main()
 
         glUseProgram(shaderProgram);
 
-        float rotAngle = glfwGetTime();
+        // float rotAngle = glfwGetTime();
 
-        glm::mat4 xRotationMatrix =
-        {
-            cos(rotAngle), 0.0, sin(rotAngle), 0.0f,
-            0.0f, 1.0, 0.0f, 0.0f,
-            -sin(rotAngle), 0.0f , cos(rotAngle), 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-        };
+        // glm::mat4 xRotationMatrix =
+        // {
+        //     cos(rotAngle), 0.0, sin(rotAngle), 0.0f,
+        //     0.0f, 1.0, 0.0f, 0.0f,
+        //     -sin(rotAngle), 0.0f , cos(rotAngle), 0.0f,
+        //     0.0f, 0.0f, 0.0f, 1.0f
+        // };
 
-        model = xRotationMatrix * glm::mat4(1.0f);
-        drift += 0.01f;
-        model = glm::translate(model, glm::vec3(drift, 0.0f, 0.0f));
+        // // model = xRotationMatrix * glm::mat4(1.0f);
+        // drift += 0.0001f;
+        // model = glm::translate(model, glm::vec3(drift, 0.0f, 0.0f));
         // glm::value_ptr exposes each GLM matrix as contiguous float data.
         // GL_FALSE means OpenGL should use the conventional GLM/OpenGL matrix
         // layout directly, without transposing it during the upload.
@@ -309,6 +317,7 @@ int main()
         glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(
             projectionLocation, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform1f(timeLocation, static_cast<float>(glfwGetTime()));
 
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
