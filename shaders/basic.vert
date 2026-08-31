@@ -15,6 +15,8 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+uniform float time;
+
 out vec3 vertexColor; // Output variable to pass the vertex color to the fragment shader.
 out vec2 localCoord; // Local/object-space XY coordinate for fragment shader experiments.
 
@@ -24,8 +26,33 @@ void main()
     // it a homogeneous position, so matrix translations affect it. Reading the
     // multiplication from right to left follows the vertex through these spaces:
     // local -> world (model) -> view (view) -> clip (projection).
-    gl_Position = projection * view * model * vec4(aPosition, 1.0);
+//    model = 
+    float angle = time * 2.0;
 
+    mat3 rotY = mat3(
+        cos(angle * 2.0),  0.0, sin(angle * 2.0),
+        0.0,         1.0, 0.0,
+        -sin(angle * 2.0),  0.0, cos(angle * 2.0)
+    );
+
+//    mat3 rotX = mat3(
+//    1.0,  0.0,      0.0,
+//    0.0,  cos(angle * 2.0), -sin(angle * 2.0),
+//    0.0, -sin(angle * 2.0), cos(angle * 2.0)
+//    );
+
+    mat3 rotZ = mat3(
+        cos(angle * 2.0),  -sin(angle * 2.0),      0.0,
+        sin(angle * 2.0),  cos(angle * 2.0), 0.0,
+        0.0, 0.0, 1.0
+        );
+        
+    vec3 spunPosition = rotZ * aPosition;   //rotX *
+    float xOffset = sin(time) * 1.5;
+    vec3 finalLocalPosition = spunPosition + vec3(xOffset, 0.0, 0.0);
+    gl_Position = projection * view * model * vec4(finalLocalPosition, 1.0);
+//    vec3 roundIt = vec3(aPosition.x, cos(aPosition.y * time), aPosition.z);
+//    gl_Position = projection * view * model * vec4(roundIt, 1.0);
     // Which matrix would you change to move the object without moving the viewer?
     // Which one controls perspective and the visible clipping range?
     vertexColor = aColor;

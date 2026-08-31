@@ -232,6 +232,7 @@ int main()
     const GLint viewLocation = glGetUniformLocation(shaderProgram, "view");
     const GLint projectionLocation = glGetUniformLocation(shaderProgram, "projection");
     const GLint timeLocation = glGetUniformLocation(shaderProgram, "time");
+    const GLint rotMatrixZ = glGetUniformLocation(shaderProgram, "rotMatrixZ");
 
     if (modelLocation == -1 ||
         viewLocation == -1 ||
@@ -253,6 +254,7 @@ int main()
     // This is a conservative starting model transform. What translation,
     // rotation, or scale would you apply here to move the triangle in its world?
     glm::mat4 model(1.0f);
+    
 
     // The view matrix converts world-space positions into view space. Moving the
     // world by -2 on Z places the triangle in front of the conventional OpenGL
