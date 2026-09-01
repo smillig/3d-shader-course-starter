@@ -311,9 +311,11 @@ int main()
     model = glm::rotate(model, glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
+
+
     // Positions and normals transform differently. The inverse-transpose keeps
     // normals perpendicular to their surfaces, including under non-uniform scale.
-    const glm::mat3 normalMatrix =
+    glm::mat3 normalMatrix =
         glm::transpose(glm::inverse(glm::mat3(model)));
 
     // The view matrix converts world-space positions into view space. Moving the
@@ -339,7 +341,7 @@ int main()
     const float fieldOfView = glm::radians(45.0f);
     const float nearPlane = 0.1f;
     const float farPlane = 100.0f;
-    // float drift = 0.0f;
+    float drift = 0.0f;
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)
     {
@@ -370,22 +372,24 @@ int main()
 
         glUseProgram(shaderProgram);
 
-        // float rotAngle = glfwGetTime();
+        float rotAngle = (float)glfwGetTime();
 
-        // glm::mat4 xRotationMatrix =
-        // {
-        //     cos(rotAngle), 0.0, sin(rotAngle), 0.0f,
-        //     0.0f, 1.0, 0.0f, 0.0f,
-        //     -sin(rotAngle), 0.0f , cos(rotAngle), 0.0f,
-        //     0.0f, 0.0f, 0.0f, 1.0f
-        // };
-
-        // // model = xRotationMatrix * glm::mat4(1.0f);
-        // drift += 0.0001f;
+        glm::mat4 xRotationMatrix =
+        {
+            cos(rotAngle), 0.0, sin(rotAngle), 0.0f,
+            0.0f, 1.0, 0.0f, 0.0f,
+            -sin(rotAngle), 0.0f , cos(rotAngle), 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        };
+        
+        model = xRotationMatrix * glm::mat4(1.0f);
+        model += glm::rotate(model, glm::radians(40.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        // drift = (sin(rotAngle) * 0.02);
         // model = glm::translate(model, glm::vec3(drift, 0.0f, 0.0f));
         // glm::value_ptr exposes each GLM matrix as contiguous float data.
         // GL_FALSE means OpenGL should use the conventional GLM/OpenGL matrix
         // layout directly, without transposing it during the upload.
+        normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
         glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(

@@ -50,6 +50,7 @@ void main()
     vec3 specularColor = specularStrength * specular * lightColor;
 
     vec3 color = ambientColor + diffuseColor + specularColor;
+    // FragColor = vec4(vec3(diffuse), 1.0);
     FragColor = vec4(color, 1.0);
 
     // FragColor = vec4(vertexColor * circleMask, 1.0);
